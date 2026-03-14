@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Not};
 
 use dominator::{Dom, events};
 use futures_signals::signal::{Mutable, SignalExt};
-use gloo::console::error;
+use gloo::console::{console_dbg, error};
 use js_sys::{Array, Promise};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
@@ -34,24 +34,33 @@ pub fn check_windows() -> Dom {
             let valid = valid.clone();
             move |evt: events::Input| {
                 #[allow(deprecated)]
-                let val = evt.value().unwrap_or_default();
+                let val = evt
+                    .value()
+                    .unwrap_or_default()
+                    .replace("Edition", "\nEdition")
+                    .replace("Version", "\nVersion")
+                    .replace("Installed on", "\nInstalled on")
+                    .replace("OS build", "\nOS build")
+                    .replace("Experience", "\nExperience")
+                    .replace("\n\n", "\n");
                 let map = val
                     .lines()
-                    .filter_map(|l| l.split_once("\t"))
+                    .filter_map(|l| l.trim().split_once("\t"))
                     .collect::<HashMap<_, _>>();
                 if let Some(edition) = map.get("Edition")
                     && edition.contains("Windows 11").not()
                 {
                     error!(format!("Edition: {}!", edition));
-                    return;
+                } else {
+                    if let Some(version) =
+                        map.get("Version").and_then(|v| v[0..2].parse::<u8>().ok())
+                        && version.lt(&21)
+                    {
+                        error!(format!("Version: {}!", version));
+                    } else {
+                        valid.set("true".into());
+                    }
                 }
-                if let Some(version) = map.get("Version").and_then(|v| v[0..2].parse::<u8>().ok())
-                    && version.lt(&21)
-                {
-                    error!(format!("Version: {}!", version));
-                    return;
-                }
-                valid.set("true".into());
             }
         })
         .into_dom();
@@ -89,29 +98,44 @@ pub fn check_device() -> Dom {
             ["my-auto", "bg-green-300"],
             gb_ram.signal_cloned().map(|u| u.is_empty().not()),
         )
-        .attr_signal(
-            "disabled",
-            at.signal()
-                .map(move |a| a < id)
-                .map(|d| if d { Some("true") } else { None }),
-        )
-        .visible_signal(at.signal().map(move |a| a >= id))
+        // .attr_signal(
+        //     "disabled",
+        //     at.signal()
+        //         .map(move |a| a < id)
+        //         .map(|d| if d { Some("true") } else { None }),
+        // )
+        // .visible_signal(at.signal().map(move |a| a >= id))
         .event({
             let valid = gb_ram.clone();
             move |evt: events::Input| {
                 #[allow(deprecated)]
-                let val = evt.value().unwrap_or_default();
+                let val = evt
+                    .value()
+                    .unwrap_or_default()
+                    .replace("Device name", "\nDevice name")
+                    .replace("Processor", "\nProcessor")
+                    .replace("Installed RAM", "\nInstalled RAM")
+                    .replace("Device ID", "\nDevice ID")
+                    .replace("Product ID", "\nProduct ID")
+                    .replace("System type", "\nSystem type")
+                    .replace("Pen and touch", "\nPen and touch")
+                    .replace("\n\n", "\n");
+
                 let map = val
                     .lines()
-                    .filter_map(|l| l.split_once("\t"))
+                    .filter_map(|l| l.trim().split_once("\t"))
                     .collect::<HashMap<_, _>>();
 
+                console_dbg!(&map);
+
                 if let Some(ram) = map.get("Installed RAM").and_then(|v| {
-                    v.chars()
-                        .filter(|c| c.is_numeric())
-                        .collect::<String>()
-                        .parse::<f64>()
-                        .ok()
+                    v.split_once("GB").and_then(|(v, _)| {
+                        v.chars()
+                            .filter(|c| c.is_numeric() || c == &'.')
+                            .collect::<String>()
+                            .parse::<f64>()
+                            .ok()
+                    })
                 }) {
                     if ram.lt(&8.0) {
                         error!(format!("Installed RAM: {}!", ram));
@@ -287,7 +311,15 @@ pub fn check_ssd() -> Dom {
                 .child(span().text("Running on an SSD").into_dom())
                 .child(
                     pre()
-                        .class(["text-[0.9rem]", "bg-neutral-200", "px-2", "rounded-lg", "w-fit", "text-orange-900", "font-bold"])
+                        .class([
+                            "text-[0.9rem]",
+                            "bg-neutral-200",
+                            "px-2",
+                            "rounded-lg",
+                            "w-fit",
+                            "text-orange-900",
+                            "font-bold",
+                        ])
                         .text("Open Task Manager -> Performance Tab")
                         .into_dom(),
                 )

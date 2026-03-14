@@ -69,9 +69,9 @@ pub fn file_upload(
     let file_input = input()
         .attr("type", "file")
         .attr("accept", mime)
-        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min"])
+        .class(["mx-1", "my-auto", "px-2", "rounded", "shadow-lg", "h-min"])
         .class_signal(
-            ["my-auto", "bg-green-300"],
+            "bg-green-300",
             url.signal_cloned().map(|u| u.is_empty().not()),
         )
         .attr_signal(
@@ -102,9 +102,9 @@ pub fn file_upload(
     [file_input.into_dom(), image.into_dom()]
 }
 
-
-fn link(name: &str, link: &str) -> [Dom; 3] {
+fn link(name: &str, link: &str, instr: &str) -> [Dom; 3] {
     let url = Mutable::new(String::new());
+    let clicked = Mutable::new(String::new());
 
     let (disabled, cb) = checkbox(url.clone());
     let fi = file_upload(url, disabled, ".jpg,.jpeg,.png");
@@ -121,7 +121,14 @@ fn link(name: &str, link: &str) -> [Dom; 3] {
                     "whitespace-pre",
                 ])
                 .attr("href", link)
+                .attr("target", "_blank")
                 .text(&format!("Download {name}"))
+                .event({
+                    let clicked = clicked.clone();
+                    move |_: events::Click| {
+                        clicked.set("true".into());
+                    }
+                })
                 .into_dom(),
                 cb,
             ])
@@ -129,11 +136,29 @@ fn link(name: &str, link: &str) -> [Dom; 3] {
         div()
             .class(["flex", "space-x-4"])
             .children([
-                span()
-                    .class(["w-[400px]", "my-auto", "whitespace-pre"])
-                    .text(&format!("Unzip & Install {name}"))
+                div().class(["w-[400px]", "my-auto"])
+                    .child(
+                        span()
+                            .class(["whitespace-pre"])
+                            .text(&format!("Unzip & Install {name}"))
+                            .into_dom(),
+                    )
+                    .child(
+                        pre()
+                            .class([
+                                "text-[0.9rem]",
+                                "bg-neutral-200",
+                                "px-2",
+                                "rounded-lg",
+                                "w-fit",
+                                "text-orange-900",
+                                "font-bold",
+                            ])
+                            .text(instr)
+                            .into_dom(),
+                    )
                     .into_dom(),
-                checkbox(Mutable::default()).1,
+                checkbox(clicked).1,
             ])
             .children(fi)
             .into_dom(),
@@ -147,31 +172,31 @@ fn render() -> Dom {
             .class("flex-1")
             .child(h2().class(["mt-4", "text-lg", "font-bold"]).text("Minimum Install Mods & Plugins").into_dom())
             .children(
-                link("Disable FPS Limits DLL", "https://github.com/caspervg/sc4-disable-fps-limits/releases/download/v0.1.1/SC4DisableFpsLimits_0.1.1.zip")
+                link("Disable FPS Limits DLL", "https://github.com/caspervg/sc4-disable-fps-limits/releases/download/v0.1.1/SC4DisableFpsLimits_0.1.1.zip", "Copy .dll to Plugins folder.")
             )
             .children(
-                link("SC4Fix DLL", "https://community.simtropolis.com/files/file/30883-sc4fix-third-party-patches-for-sc4/")
+                link("SC4Fix DLL", "https://community.simtropolis.com/files/file/30883-sc4fix-third-party-patches-for-sc4/", "")
             )
             .children(
-                link("CPU Options DLL", "https://community.simtropolis.com/files/file/36120-sc4-cpu-options/")
+                link("CPU Options DLL", "https://community.simtropolis.com/files/file/36120-sc4-cpu-options/", "")
             )
             .children(
-                link("Graphics Options DLL", "https://community.simtropolis.com/files/file/36091-sc4-graphics-options/")
+                link("Graphics Options DLL", "https://community.simtropolis.com/files/file/36091-sc4-graphics-options/", "")
             )
             .children(
-                link("Startup Performance Optimization DLL", "https://community.simtropolis.com/files/file/36244-startup-performance-optimization-dll-for-simcity-4/")
+                link("Startup Performance Optimization DLL", "https://community.simtropolis.com/files/file/36244-startup-performance-optimization-dll-for-simcity-4/", "")
             )
             .children(
-                link("Region Thumbnail Fix DLL", "https://community.simtropolis.com/files/file/36396-region-thumbnail-fix-dll/")
+                link("Region Thumbnail Fix DLL", "https://community.simtropolis.com/files/file/36396-region-thumbnail-fix-dll/", "")
             )
             .children(
-                link("Transparent Texture Fix DLL", "https://community.simtropolis.com/files/file/36379-transparent-texture-water-bug-fix-dll/")
+                link("Transparent Texture Fix DLL", "https://community.simtropolis.com/files/file/36379-transparent-texture-water-bug-fix-dll/", "")
             )
             .children(
-                link("4GB Patch", "https://ntcore.com/files/4gb_patch.zip")
+                link("4GB Patch", "https://ntcore.com/files/4gb_patch.zip", "")
             )
             .children(
-                link("DgVoodoo 2", "https://community.simtropolis.com/files/file/36227-dgvoodoo-2-simcity-4-edition/")
+                link("DgVoodoo 2", "https://community.simtropolis.com/files/file/36227-dgvoodoo-2-simcity-4-edition/", "")
             ).into_dom()
     };
 
@@ -186,12 +211,14 @@ fn render() -> Dom {
             .children(link(
                 "SC4Pac",
                 "https://github.com/memo33/sc4pac-gui/releases",
+                "",
             ))
             .children(link(
                 "Auto Save DLL",
                 "https://community.simtropolis.com/files/file/35761-sc4-auto-save/",
+                "",
             ))
-            .children(link("ReShade", "https://reshade.me/"))
+            .children(link("ReShade", "https://reshade.me/", ""))
             .into_dom()
     };
 
@@ -203,11 +230,16 @@ fn render() -> Dom {
                 .text("Prerequisites")
                 .into_dom(),
         )
-        .child(handlers::check_windows())
-        .child(handlers::simcity_4_exe("Installed SimCity 4"))
-        .child(handlers::check_device())
-        .child(handlers::check_ssd())
-        .child(handlers::check_plugins("Empty Plugins"))
+        .child(
+            div()
+                .class(["flex", "flex-col", "space-y-1"])
+                .child(handlers::check_windows())
+                .child(handlers::simcity_4_exe("Installed SimCity 4"))
+                .child(handlers::check_device())
+                .child(handlers::check_ssd())
+                .child(handlers::check_plugins("Empty Plugins"))
+                .into_dom(),
+        )
         .child(
             div()
                 .class(["flex"])
