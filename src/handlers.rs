@@ -17,7 +17,7 @@ pub fn check_windows() -> Dom {
 
     let file_input = input()
         .attr("type", "text")
-        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min"])
+        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min", "w-[250px]"])
         .attr("placeholder", "Paste Windows Specifications here!")
         .class_signal(
             ["my-auto", "bg-green-300"],
@@ -92,19 +92,19 @@ pub fn check_device() -> Dom {
 
     let file_input = input()
         .attr("type", "text")
-        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min"])
+        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min", "w-[250px]"])
         .attr("placeholder", "Paste Device Specifications here!")
         .class_signal(
             ["my-auto", "bg-green-300"],
             gb_ram.signal_cloned().map(|u| u.is_empty().not()),
         )
-        // .attr_signal(
-        //     "disabled",
-        //     at.signal()
-        //         .map(move |a| a < id)
-        //         .map(|d| if d { Some("true") } else { None }),
-        // )
-        // .visible_signal(at.signal().map(move |a| a >= id))
+        .attr_signal(
+            "disabled",
+            at.signal()
+                .map(move |a| a < id)
+                .map(|d| if d { Some("true") } else { None }),
+        )
+        .visible_signal(at.signal().map(move |a| a >= id))
         .event({
             let valid = gb_ram.clone();
             move |evt: events::Input| {
@@ -180,7 +180,7 @@ pub fn simcity_4_exe(name: &'static str) -> Dom {
     let file_input = input()
         .attr("type", "file")
         .attr("accept", ".exe")
-        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min"])
+        .class(["m-1", "px-2", "rounded", "shadow-lg", "h-min", "w-[250px]"])
         .class_signal(
             ["my-auto", "bg-green-300"],
             ver_mut.signal_cloned().map(|u| u.is_empty().not()),
@@ -245,7 +245,8 @@ pub fn simcity_4_exe(name: &'static str) -> Dom {
         .child(file_input)
         .into_dom()
 }
-pub fn check_plugins(name: &'static str) -> Dom {
+
+pub fn check_document_plugins_folder_empty(name: &'static str) -> Dom {
     let is_empty = Mutable::new(String::new());
 
     let ((at, id), checkbox) = checkbox(is_empty.clone());
@@ -300,14 +301,46 @@ pub fn check_plugins(name: &'static str) -> Dom {
 pub fn check_ssd() -> Dom {
     let url = Mutable::new(String::new());
 
-    let (disabled, checkbox) = checkbox(url.clone());
-    let fi = file_upload(url, disabled, ".jpg,.jpeg,.png");
+    let ((at, id), checkbox) = checkbox(url.clone()); 
+    let file_input = input()
+        .attr("type", "file")
+        .attr("accept", ".jpg,.jpeg,.png")
+        .class(["mx-1", "my-auto", "px-2", "rounded", "shadow-lg", "h-min", "w-[250px]"])
+        .class_signal(
+            "bg-green-300",
+            url.signal_cloned().map(|u| u.is_empty().not()),
+        )
+        .attr_signal(
+            "disabled",
+            at.signal()
+                .map(move |a| a < id)
+                .map(|d| if d { Some("true") } else { None }),
+        )
+        .visible_signal(at.signal().map(move |a| a >= id))
+        .event({
+            let url = url.clone();
+            move |evt: events::Input| {
+                let input = evt.target().unwrap().unchecked_into::<HtmlInputElement>();
+                if let Some(file) = input.files().and_then(|files| files.get(0)) {
+                    let blob_url = web_sys::Url::create_object_url_with_blob(&file).unwrap();
+                    url.set(blob_url);
+                }
+            }
+        }).into_dom();
+
+    let image = img().attr_signal("src", url.signal_cloned()).class([
+        "max-h-100",
+        "m-1",
+        "rounded-lg",
+        "shadow-lg",
+    ]).into_dom();
+ 
 
     div()
         .class(["flex", "space-x-4"])
         .child(
             div()
-                .class(["w-[400px]", "my-auto", "whitespace-pre"])
+                .class(["min-w-[400px]", "my-auto", "whitespace-pre"])
                 .child(span().text("Running on an SSD").into_dom())
                 .child(
                     pre()
@@ -326,8 +359,16 @@ pub fn check_ssd() -> Dom {
                 .into_dom(),
         )
         .child(checkbox)
-        .children(fi)
+        .child(file_input)
+        .child(image)
         .into_dom()
+}
+
+pub fn check_document_plugins() -> Dom {
+    div().into_dom()
+}
+pub fn check_install_folder() -> Dom {
+    div().into_dom()
 }
 
 fn parse_file_version(bytes: &[u8]) -> Option<String> {
